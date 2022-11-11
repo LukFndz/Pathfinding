@@ -8,7 +8,13 @@ public class PriorityQueue
 
     public void Enqueue(Node node, float cost)
     {
-        _allElems.Add(node, cost);
+        if(_allElems.ContainsKey(node))
+        {
+            _allElems[node] = cost;
+        } else
+        {
+            _allElems.Add(node, cost);
+        }
     }
 
     public Node Dequeue()

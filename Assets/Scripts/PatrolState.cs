@@ -5,8 +5,8 @@ using UnityEngine;
 public class PatrolState : IState
 {
     private StateMachine _sm;
-    private readonly Enemy _enemy;
-    private List<Node> _returnPath = new List<Node>();
+    private Enemy _enemy;
+    private List<Node> _backPath = new List<Node>();
     private int _currentReturnNode = 0;
     private List<Transform> _visibleNodes = new List<Transform>();
 
@@ -16,33 +16,43 @@ public class PatrolState : IState
         _enemy = enemy;
     }
 
-    public void OnUpdate()
+    public void ManualUpdate()
     {
+        //Debug.Log("PATROL: " + _enemy.gameObject.name);
+
         if (_enemy.Target != null)
         {
             _sm.ChangeState("ChaseState");
             return;
         }
 
-        _enemy.Target = _enemy.ApplyFOV(_enemy.TargetLayer);
+        _enemy.Target = _enemy.FOV(_enemy.TargetLayer);
 
-        FindVisibleNodes();
+        CheckVisibleNodes();
 
         if (_visibleNodes.Contains(_enemy.wayPoints[_enemy.CurrentWayPoint]))
-            PatrolNodes();
+        {
+            Patrol();
+        }
         else
+        {
             MoveToNodes();
+        }
 
-        if (_returnPath.Count == 0)
+        if (_backPath.Count == 0)
+        {
             _enemy.Move(_enemy.wayPoints[_enemy.CurrentWayPoint].transform.position);
+        }
         else
-            _enemy.Move(_returnPath[_currentReturnNode].transform.position);
+        {
+            _enemy.Move(_backPath[_currentReturnNode].transform.position);
+        }
     }
 
 
-    private void PatrolNodes()
+    private void Patrol()
     {
-        _returnPath.Clear();
+        _backPath.Clear();
 
         _enemy.Move(_enemy.wayPoints[_enemy.CurrentWayPoint].transform.position);
 
@@ -56,30 +66,7 @@ public class PatrolState : IState
         }
     }
 
-    private void MoveToNodes()
-    {
-        if (_returnPath.Count == 0)
-        {
-            _returnPath = _enemy.ConstructPath(_enemy.GetNerbyNode(), _enemy.wayPoints[0].gameObject.GetComponent<Node>());
-            _returnPath.Reverse();
-
-            _currentReturnNode = 0;
-            _enemy.CurrentWayPoint = 0;
-
-            
-            if (_returnPath.Count == 0)
-                PatrolNodes();
-        }
-
-        _enemy.Move(_returnPath[_currentReturnNode].transform.position);
-
-        Vector3 pointDistance = _returnPath[_currentReturnNode].transform.position - _enemy.transform.position;
-
-        if (pointDistance.magnitude < _enemy.EnemyProperties.stoppingDistance)
-            _currentReturnNode++;
-    }
-
-    private void FindVisibleNodes()
+    private void CheckVisibleNodes()
     {
         _visibleNodes.Clear();
 
@@ -94,9 +81,32 @@ public class PatrolState : IState
             if (Vector3.Angle(_enemy.transform.forward, dirToTarget) < _enemy.AngleRadius / 2)
             {
                 if (!Physics.Raycast(_enemy.transform.position, dirToTarget, dirToTarget.magnitude,
-                    _enemy.ObstacleLayer))
+                    _enemy.WallLayer))
                     _visibleNodes.Add(node.transform);
             }
         }
+    }
+
+    private void MoveToNodes()
+    {
+        if (_backPath.Count == 0)
+        {
+            _backPath = _enemy.GetPath(_enemy.GetNerbyNode(), _enemy.wayPoints[0].gameObject.GetComponent<Node>());
+            _backPath.Reverse();
+
+            _currentReturnNode = 0;
+            _enemy.CurrentWayPoint = 0;
+
+            
+            if (_backPath.Count == 0)
+                Patrol();
+        }
+
+        _enemy.Move(_backPath[_currentReturnNode].transform.position);
+
+        Vector3 pointDistance = _backPath[_currentReturnNode].transform.position - _enemy.transform.position;
+
+        if (pointDistance.magnitude < _enemy.EnemyProperties.stoppingDistance)
+            _currentReturnNode++;
     }
 }

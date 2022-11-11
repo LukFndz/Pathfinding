@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 
 [System.Serializable]
 public struct EnemyProperties
@@ -20,11 +20,12 @@ public class Enemy : MonoBehaviour
     [Header("FOV")]
     [SerializeField] private float _viewRadius;
     [SerializeField] private float _angleRadius;
+    [SerializeField] private float _catchRadius;
 
-    [Header("LayerMasks")]
+    [Header("LayerMask")]
     [SerializeField] private LayerMask _targetLayer;
     [SerializeField] private LayerMask _nodeLayer;
-    [SerializeField] private LayerMask _obstacleLayer;
+    [SerializeField] private LayerMask _wallLayer;
 
 
     private GameObject _target;
@@ -38,9 +39,14 @@ public class Enemy : MonoBehaviour
     private StateMachine _sm;
     private List<Enemy> _enemies;
 
+    private Vector3 dirToTarget;
+    private Ray ray;
+    private RaycastHit hit;
+
+
     public LayerMask TargetLayer { get => _targetLayer; set => _targetLayer = value; }
     public LayerMask NodeLayer { get => _nodeLayer; set => _nodeLayer = value; }
-    public LayerMask ObstacleLayer { get => _obstacleLayer; set => _obstacleLayer = value; }
+    public LayerMask WallLayer { get => _wallLayer; set => _wallLayer = value; }
     public Vector3 LastTargetPosition { get => _lastTargetPosition; set => _lastTargetPosition = value; }
     public GameObject Target { get => _target; set => _target = value; }
     public EnemyProperties EnemyProperties { get => _enemyProperties; set => _enemyProperties = value; }
@@ -59,15 +65,40 @@ public class Enemy : MonoBehaviour
 
     private void Start()
     {
-        _enemies = GameObject.FindObjectsOfType<Enemy>().Where(x => x != this).ToList();
+        _enemies = FindObjectsOfType<Enemy>().Where(x => x != this).ToList(); // BUSCA TODOS LOS ENEMIGOS MEDIANTE LINQ
     }
 
     private void Update()
     {
-        _sm.OnUpdate();
-    }
+        _sm.ManualUpdate();
+        Collider[] playerCheck = Physics.OverlapSphere(transform.position, _catchRadius, _targetLayer);
 
-    public List<Node> ConstructPath(Node startingNode, Node goalNode)
+        if(playerCheck.Count() > 0)
+        {
+            SceneManager.LoadScene(0);
+        }
+    }
+    public GameObject FOV(LayerMask targetMask) // FIELD OF VIEW / LINE OF SIGHT
+    {
+        Collider[] targetsInViewRadius = Physics.OverlapSphere(transform.position, _viewRadius, targetMask);
+        int layerMask = 1 << 9;
+
+        foreach (var item in targetsInViewRadius)
+        {
+            GameObject target = item.gameObject;
+
+            dirToTarget = target.transform.position - transform.position;
+
+            if (Vector3.Angle(transform.forward, dirToTarget) < _angleRadius / 2)
+            {
+                if (!Physics.Raycast(transform.position, dirToTarget, dirToTarget.magnitude, layerMask))
+                    return target;
+            }
+        }
+
+        return null;
+    }
+    public List<Node> GetPath(Node startingNode, Node goalNode) // CONSIGUE EL CAMINO OPTIMO ENTRE LOS DOS NODOS ENVIADOS
     {
         PriorityQueue frontier = new PriorityQueue();
         Dictionary<Node, Node> cameFrom = new Dictionary<Node, Node>();
@@ -94,62 +125,58 @@ public class Enemy : MonoBehaviour
                 return path;
             }
 
-            foreach (var next in current.neighbors)
+            foreach (var neighbor in current.neighbors)
             {
-                float newCost = costSoFar[current] + next.Cost;
-                if (!costSoFar.ContainsKey(next) || newCost < costSoFar[next])
+                float newCost = costSoFar[current] + neighbor.Cost;
+                if (!costSoFar.ContainsKey(neighbor) || newCost < costSoFar[neighbor])
                 {
-                    costSoFar[next] = newCost;
-                    float priority = newCost + Heuristic(next.transform.position, goalNode);
-                    frontier.Enqueue(next, priority);
-                    cameFrom[next] = current;
+                    costSoFar[neighbor] = newCost;
+                    float priority = newCost + GetDistance(neighbor.transform.position, goalNode);
+                    frontier.Enqueue(neighbor, priority);
+                    cameFrom[neighbor] = current;
                 }
             }
         }
         return null;
     }
 
-    public void AlertEnemies()
+    public void Alert() // ALERTA A LOS ENEMIGOS DE QUE VIÓ AL PLAYER
     {
-        foreach (Enemy enemy in _enemies)
+        foreach (Enemy e in _enemies)
         {
-            enemy._chasePath.Clear();
-            enemy._target = _target;
-            enemy._lastTargetPosition = _target.transform.position;
+            e._chasePath.Clear();
+            e._target = _target;
+            e._lastTargetPosition = _target.transform.position;
         }
     }
 
-    public GameObject ApplyFOV(LayerMask targetMask)
+    private float GetDistance(Vector3 vector, Node node) // CONSIGUE LA DISTANCIA ENTRE EL NODO Y LA POS QUE LE PASE
     {
-        Collider[] targetsInViewRadius = Physics.OverlapSphere(transform.position, _viewRadius, targetMask);
-
-        foreach (var item in targetsInViewRadius)
-        {
-            GameObject target = item.gameObject;
-
-            Vector3 dirToTarget = target.transform.position - transform.position;
-
-            if (Vector3.Angle(transform.forward, dirToTarget) < _angleRadius / 2)
-            {
-                if (!Physics.Raycast(transform.position, dirToTarget, dirToTarget.magnitude, _obstacleLayer))
-                    return target;
-            }
-        }
-
-        return null;
+        return Mathf.Abs((node.transform.position - vector).magnitude);
     }
 
-    /// <summary>
-    /// Returns the enemy's closest node 
-    /// </summary>
-    /// <returns></returns>
-    public Node GetNerbyNode()
+    public void Move(Vector3 newPos) // MOVIMIENTO DEL ENEMIGO
+    {
+        float step = _enemyProperties.speed * Time.deltaTime;
+
+        newPos.y = transform.position.y;
+        transform.position = Vector3.MoveTowards(transform.position, newPos, step);
+
+        Rotate(newPos);
+    }
+
+    private void Rotate(Vector3 newPos) // ROTACION DEL ENEMIGO
+    {
+        newPos.y = transform.position.y;
+        transform.LookAt(newPos);
+    }
+
+    public Node GetNerbyNode() // CONSIGUE EL NODO MAS CERCA
     {
         GameObject nerbyNode = null;
 
         Collider[] targetsInViewRadius = Physics.OverlapSphere(transform.position, _viewRadius, _nodeLayer);
-
-        float distance = 999f;
+        float distance = float.MaxValue;
 
         foreach (var item in targetsInViewRadius)
         {
@@ -165,27 +192,6 @@ public class Enemy : MonoBehaviour
         return nerbyNode.GetComponent<Node>();
     }
 
-    public void Move(Vector3 newPos)
-    {
-        float step = _enemyProperties.speed * Time.deltaTime;
-
-        newPos.y = transform.position.y;
-        transform.position = Vector3.MoveTowards(transform.position, newPos, step);
-
-        Rotate(newPos);
-    }
-
-    private void Rotate(Vector3 newPos)
-    {
-        newPos.y = transform.position.y;
-        transform.LookAt(newPos);
-    }
-
-    private float Heuristic(Vector3 pos, Node goalNode)
-    {
-        return Mathf.Abs((goalNode.transform.position - pos).magnitude);
-    }
-
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
@@ -198,5 +204,10 @@ public class Enemy : MonoBehaviour
         Vector3 rightRayDirection = rightRayRotation * transform.forward;
         Gizmos.DrawRay(transform.position, leftRayDirection * rayRange);
         Gizmos.DrawRay(transform.position, rightRayDirection * rayRange);
+
+        
+        Gizmos.color = Color.yellow;
+        if(_target != null)
+            Gizmos.DrawRay(transform.position, dirToTarget);
     }
 }

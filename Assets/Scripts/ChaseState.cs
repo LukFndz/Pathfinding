@@ -5,10 +5,10 @@ using UnityEngine;
 public class ChaseState : IState
 {
     private StateMachine _sm;
-    private readonly Enemy _enemy;
+    private Enemy _enemy;
     private int _currentChaseNode = 0;
-    private bool _targetIsVisible;
-    private bool _lastNodeReached;
+    private bool _seeTarget;
+    private bool _onGoalNode;
 
     public ChaseState(Enemy enemy, StateMachine sm)
     {
@@ -16,24 +16,24 @@ public class ChaseState : IState
         _enemy = enemy;
     }
 
-    public void OnUpdate()
+    public void ManualUpdate()
     {
-        GameObject g = _enemy.ApplyFOV(_enemy.TargetLayer); // SI SE VE EL PLAYER, RETORNA, SINO, ES NULL
-        _targetIsVisible = g;
+        GameObject g = _enemy.FOV(_enemy.TargetLayer); // SI SE VE EL PLAYER, RETORNA, SINO, ES NULL
+        _seeTarget = g;
 
-        if (_targetIsVisible) // SI VE AL PLAYER
+        if (_seeTarget) // SI VE AL PLAYER
         {
             _enemy.LastTargetPosition = g.transform.position; // SETEA CONSTANTEMENTE LA ULTIMA POS DEL PLAYER
-            _enemy.AlertEnemies(); // ALERTA ENEMIGOS
-            ChaseTarget(); // CHASE AL PLAYER
+            _enemy.Alert(); // ALERTA ENEMIGOS
+            Chase(); // CHASE AL PLAYER
         }
         else
         {
-            MoveToLastPos();
+            GoToLastPos();
         }
     }
 
-    private void ChaseTarget() // CHASE AL PLAYER
+    private void Chase() // CHASE AL PLAYER
     {
         if (_enemy.Target == null)
             return;
@@ -41,16 +41,22 @@ public class ChaseState : IState
         _enemy.Move(_enemy.Target.transform.position);
     }
 
-    private void MoveToLastPos()
+    private void GoToLastPos()
     {
-        if (_lastNodeReached) // SI LLEGÓ AL ULTIMO NODO, VA HACIA LA ULTIMA POS DEL PLAYER
+        if (_onGoalNode) // SI LLEGÓ AL ULTIMO NODO, VA HACIA LA ULTIMA POS DEL PLAYER
         {
+            if (_enemy.name == "Blue")
+                Debug.Log(_onGoalNode);
+
+            _enemy.ChasePath.Clear();
+
             _enemy.Move(_enemy.LastTargetPosition);
 
             Vector3 pointDistance = _enemy.LastTargetPosition - _enemy.transform.position;
 
             if (pointDistance.magnitude < _enemy.EnemyProperties.stoppingDistance) // SI NO LO VE, CAMBIA DE ESTADO
             {
+                _onGoalNode = false;
                 _enemy.Target = null;
                 _sm.ChangeState("PatrolState");
             }
@@ -59,22 +65,25 @@ public class ChaseState : IState
         {
             if (_enemy.ChasePath.Count == 0) // CHECK SI YA EXISTE CAMINO
             {
+
                 Node goalNode = GetNerbyTargetNode(); // EL NODO FINAL SERÁ EL MAS CERCANO AL TARGET
 
                 if (goalNode == null)
                 {
-                    _lastNodeReached = true;
+                    if (_enemy.name == "Blue")
+                        Debug.Log("ESTABA NULO");
+                    _onGoalNode = true;
                     return;
                 }
 
-                _enemy.ChasePath = _enemy.ConstructPath(_enemy.GetNerbyNode(), goalNode); //CONSTRUYE EL CAMINO DESDE EL NODO MAS CERCANO HASTA EL MAS CERCANO AL PLAYER
+                _enemy.ChasePath = _enemy.GetPath(_enemy.GetNerbyNode(), goalNode); //CONSTRUYE EL CAMINO DESDE EL NODO MAS CERCANO HASTA EL MAS CERCANO AL PLAYER
                 _enemy.ChasePath.Reverse(); // INVIERTE LA LISTA (EL CAMINO)
 
                 _currentChaseNode = 0;
 
                 if (_enemy.ChasePath.Count == 0)
                 {
-                    _lastNodeReached = true;
+                    _onGoalNode = true;
                     return;
                 }
             }
@@ -87,7 +96,7 @@ public class ChaseState : IState
             {
                 _currentChaseNode++; // SIGUIENTE NODO
                 if (_currentChaseNode > _enemy.ChasePath.Count - 1) // CHECK SI LLEGO AL ULTIMO
-                    _lastNodeReached = true;
+                    _onGoalNode = true;
             }
         }
     }
@@ -99,19 +108,22 @@ public class ChaseState : IState
 
         GameObject nerbyNode = null;
 
-        List<Node> allNodes = GameObject.FindObjectsOfType<Node>().ToList();
-
         float distance = float.MaxValue; // SETEA LA DISTANCIA AL MAXIMO COMO PRIMER VALOR
 
-        foreach (var item in allNodes) // CHECK TODOS LOS NODOS A VER CUAL ESTÁ MAS CERCA DEL TARGET
-        {
-            Vector3 nodeDistance = item.transform.position - _enemy.Target.transform.position;
+        List<Node> allNodes = GameObject.FindObjectsOfType<Node>().ToList();
 
-            if (nodeDistance.magnitude < distance)
-            {
-                distance = nodeDistance.magnitude;
-                nerbyNode = item.gameObject;
-            }
+        foreach (var node in allNodes) // CHECK TODOS LOS NODOS A VER CUAL ESTÁ MAS CERCA DEL TARGET 
+        {
+            GameObject target = node.gameObject;
+
+            Vector3 dirToTarget = target.transform.position - _enemy.Target.transform.position;
+
+            if (!Physics.Raycast(_enemy.Target.transform.position, dirToTarget, dirToTarget.magnitude, _enemy.WallLayer)) //CHECK QUE LOS NODOS ESTEN AL ALCANCE DEL PLAYER (NO ATRAVIESEN PAREDES)
+                if (dirToTarget.magnitude < distance)
+                {
+                    distance = dirToTarget.magnitude;
+                    nerbyNode = node.gameObject;
+                }
         }
 
         return nerbyNode.GetComponent<Node>();

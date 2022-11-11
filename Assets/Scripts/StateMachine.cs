@@ -6,11 +6,11 @@ public class StateMachine : MonoBehaviour
 {
     private readonly Dictionary<string, IState> _stateDictionary = new Dictionary<string, IState>();
 
-    private IState _currentState = new EmptyState();
+    private IState _currentState;
 
-    public void OnUpdate()
+    public void ManualUpdate()
     {
-        _currentState.OnUpdate();
+        _currentState.ManualUpdate();
     }
 
     public void ChangeState(string id)

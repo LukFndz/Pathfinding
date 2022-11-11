@@ -4,10 +4,5 @@ using UnityEngine;
 
 public interface IState
 {
-    void OnUpdate();
-}
-
-public class EmptyState : IState
-{
-    public void OnUpdate() { }
+    void ManualUpdate();
 }

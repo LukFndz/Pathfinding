@@ -5,5 +5,7 @@ using UnityEngine;
 public class Node : MonoBehaviour
 {
     public List<Node> neighbors;
-    public int Cost = 1;
+    [SerializeField] private int _cost = 1;
+
+    public int Cost { get => _cost; set => _cost = value; }
 }

@@ -5,26 +5,23 @@ using UnityEngine.SceneManagement;
 
 public class Player : MonoBehaviour
 {
-    public float Speed;
+    [SerializeField] private float _speed;
 
     private void Update()
     {
-        if (Input.GetKey(KeyCode.W))
-            transform.position += Speed * Time.deltaTime * Vector3.forward;
-        else if (Input.GetKey(KeyCode.S))
-            transform.position += Speed * Time.deltaTime * Vector3.back;
-
-        if (Input.GetKey(KeyCode.A))
-            transform.position += Speed * Time.deltaTime * Vector3.left;
-        else if (Input.GetKey(KeyCode.D))
-            transform.position += Speed * Time.deltaTime * Vector3.right;
+        Move();
     }
 
-    private void OnTriggerEnter(Collider other)
+    public void Move()
     {
-        if (other.gameObject.layer == 10)
-        {
-            SceneManager.LoadScene(0);
-        }
+        if (Input.GetKey(KeyCode.W))
+            transform.position += _speed * Time.deltaTime * new Vector3(0, 0, 1);
+        else if (Input.GetKey(KeyCode.S))
+            transform.position += _speed * Time.deltaTime * new Vector3(0, 0, -1);
+
+        if (Input.GetKey(KeyCode.A))
+            transform.position += _speed * Time.deltaTime * new Vector3(-1, 0, 0);
+        else if (Input.GetKey(KeyCode.D))
+            transform.position += _speed * Time.deltaTime * new Vector3(1, 0, 0);
     }
 }
