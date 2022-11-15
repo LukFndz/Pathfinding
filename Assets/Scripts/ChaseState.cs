@@ -45,9 +45,6 @@ public class ChaseState : IState
     {
         if (_onGoalNode) // SI LLEGÓ AL ULTIMO NODO, VA HACIA LA ULTIMA POS DEL PLAYER
         {
-            if (_enemy.name == "Blue")
-                Debug.Log(_onGoalNode);
-
             _enemy.ChasePath.Clear();
 
             _enemy.Move(_enemy.LastTargetPosition);
@@ -65,19 +62,17 @@ public class ChaseState : IState
         {
             if (_enemy.ChasePath.Count == 0) // CHECK SI YA EXISTE CAMINO
             {
-
                 Node goalNode = GetNerbyTargetNode(); // EL NODO FINAL SERÁ EL MAS CERCANO AL TARGET
 
                 if (goalNode == null)
                 {
-                    if (_enemy.name == "Blue")
-                        Debug.Log("ESTABA NULO");
                     _onGoalNode = true;
                     return;
                 }
 
                 _enemy.ChasePath = _enemy.GetPath(_enemy.GetNerbyNode(), goalNode); //CONSTRUYE EL CAMINO DESDE EL NODO MAS CERCANO HASTA EL MAS CERCANO AL PLAYER
                 _enemy.ChasePath.Reverse(); // INVIERTE LA LISTA (EL CAMINO)
+                _enemy.ChasePath.RemoveAt(0);
 
                 _currentChaseNode = 0;
 
@@ -108,24 +103,22 @@ public class ChaseState : IState
 
         GameObject nerbyNode = null;
 
-        float distance = float.MaxValue; // SETEA LA DISTANCIA AL MAXIMO COMO PRIMER VALOR
-
         List<Node> allNodes = GameObject.FindObjectsOfType<Node>().ToList();
 
-        foreach (var node in allNodes) // CHECK TODOS LOS NODOS A VER CUAL ESTÁ MAS CERCA DEL TARGET 
+        float distance = float.MaxValue;
+
+        foreach (var item in allNodes)
         {
-            GameObject target = node.gameObject;
+            Vector3 nodeDistance = item.transform.position - _enemy.Target.transform.position;
 
-            Vector3 dirToTarget = target.transform.position - _enemy.Target.transform.position;
-
-            if (!Physics.Raycast(_enemy.Target.transform.position, dirToTarget, dirToTarget.magnitude, _enemy.WallLayer)) //CHECK QUE LOS NODOS ESTEN AL ALCANCE DEL PLAYER (NO ATRAVIESEN PAREDES)
-                if (dirToTarget.magnitude < distance)
-                {
-                    distance = dirToTarget.magnitude;
-                    nerbyNode = node.gameObject;
-                }
+            if (nodeDistance.magnitude < distance)
+            {
+                distance = nodeDistance.magnitude;
+                nerbyNode = item.gameObject;
+            }
         }
 
         return nerbyNode.GetComponent<Node>();
     }
 }
+

@@ -32,12 +32,13 @@ public class Enemy : MonoBehaviour
 
     private int _currentWayPoint = 0;
 
-    private List<Node> _chasePath = new List<Node>();
+    [SerializeField]private List<Node> _chasePath = new List<Node>();
 
     private Vector3 _lastTargetPosition;
 
     private StateMachine _sm;
     private List<Enemy> _enemies;
+
 
     private Vector3 dirToTarget;
     private Ray ray;
@@ -122,6 +123,7 @@ public class Enemy : MonoBehaviour
                     path.Add(current);
                     current = cameFrom[current];
                 }
+                path.Add(startingNode);
                 return path;
             }
 
