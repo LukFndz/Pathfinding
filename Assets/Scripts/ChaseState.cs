@@ -69,11 +69,10 @@ public class ChaseState : IState
                     _onGoalNode = true;
                     return;
                 }
-
                 _enemy.ChasePath = _enemy.GetPath(_enemy.GetNerbyNode(), goalNode); //CONSTRUYE EL CAMINO DESDE EL NODO MAS CERCANO HASTA EL MAS CERCANO AL PLAYER
                 _enemy.ChasePath.Reverse(); // INVIERTE LA LISTA (EL CAMINO)
-                _enemy.ChasePath.RemoveAt(0);
-
+                if(_enemy.ChasePath.Count > 1)
+                    _enemy.ChasePath.RemoveAt(0);
                 _currentChaseNode = 0;
 
                 if (_enemy.ChasePath.Count == 0)
@@ -113,11 +112,13 @@ public class ChaseState : IState
 
             if (nodeDistance.magnitude < distance)
             {
-                distance = nodeDistance.magnitude;
-                nerbyNode = item.gameObject;
+                if (!Physics.Raycast(_enemy.Target.transform.position, nodeDistance, nodeDistance.magnitude, _enemy.WallLayer))
+                {
+                    distance = nodeDistance.magnitude;
+                    nerbyNode = item.gameObject;
+                }
             }
         }
-
         return nerbyNode.GetComponent<Node>();
     }
 }

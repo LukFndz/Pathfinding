@@ -186,8 +186,11 @@ public class Enemy : MonoBehaviour
 
             if (nodeDistance.magnitude < distance)
             {
-                distance = nodeDistance.magnitude;
-                nerbyNode = item.gameObject;
+                if (!Physics.Raycast(transform.position, nodeDistance, nodeDistance.magnitude, WallLayer))
+                {
+                    distance = nodeDistance.magnitude;
+                    nerbyNode = item.gameObject;
+                }
             }
         }
 
