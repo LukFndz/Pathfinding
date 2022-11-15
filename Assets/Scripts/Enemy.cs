@@ -186,7 +186,7 @@ public class Enemy : MonoBehaviour
 
             if (nodeDistance.magnitude < distance)
             {
-                if (!Physics.Raycast(transform.position, nodeDistance, nodeDistance.magnitude, WallLayer))
+                if (!Physics.Raycast(transform.position, nodeDistance, nodeDistance.magnitude, _wallLayer))
                 {
                     distance = nodeDistance.magnitude;
                     nerbyNode = item.gameObject;
@@ -209,10 +209,5 @@ public class Enemy : MonoBehaviour
         Vector3 rightRayDirection = rightRayRotation * transform.forward;
         Gizmos.DrawRay(transform.position, leftRayDirection * rayRange);
         Gizmos.DrawRay(transform.position, rightRayDirection * rayRange);
-
-        
-        Gizmos.color = Color.yellow;
-        if(_target != null)
-            Gizmos.DrawRay(transform.position, dirToTarget);
     }
 }

@@ -10,6 +10,8 @@ public class ChaseState : IState
     private bool _seeTarget;
     private bool _onGoalNode;
 
+    int lastCount;
+
     public ChaseState(Enemy enemy, StateMachine sm)
     {
         _sm = sm;
@@ -71,9 +73,12 @@ public class ChaseState : IState
                 }
                 _enemy.ChasePath = _enemy.GetPath(_enemy.GetNerbyNode(), goalNode); //CONSTRUYE EL CAMINO DESDE EL NODO MAS CERCANO HASTA EL MAS CERCANO AL PLAYER
                 _enemy.ChasePath.Reverse(); // INVIERTE LA LISTA (EL CAMINO)
-                if(_enemy.ChasePath.Count > 1)
-                    _enemy.ChasePath.RemoveAt(0);
-                _currentChaseNode = 0;
+
+                if (lastCount != _enemy.ChasePath.Count)
+                {
+                    lastCount = _enemy.ChasePath.Count;
+                    _currentChaseNode = 0;
+                }
 
                 if (_enemy.ChasePath.Count == 0)
                 {
