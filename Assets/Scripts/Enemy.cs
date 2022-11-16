@@ -124,6 +124,7 @@ public class Enemy : MonoBehaviour
                     path.Add(current);
                     current = cameFrom[current];
                 }
+                
                 return path;
             }
 
