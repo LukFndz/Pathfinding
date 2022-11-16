@@ -124,7 +124,7 @@ public class Enemy : MonoBehaviour
                     path.Add(current);
                     current = cameFrom[current];
                 }
-                
+                path.Add(startingNode);
                 return path;
             }
 
@@ -147,7 +147,6 @@ public class Enemy : MonoBehaviour
     {
         foreach (Enemy e in _enemies)
         {
-            e._chasePath.Clear();
             e._target = _target;
             e._lastTargetPosition = _target.transform.position;
         }
