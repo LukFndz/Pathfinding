@@ -10,8 +10,6 @@ public class ChaseState : IState
     private bool _seeTarget;
     private bool _onGoalNode;
 
-    int lastCount;
-
     public ChaseState(Enemy enemy, StateMachine sm)
     {
         _sm = sm;
@@ -20,6 +18,7 @@ public class ChaseState : IState
 
     public void ManualUpdate()
     {
+
         GameObject g = _enemy.FOV(_enemy.TargetLayer); // SI SE VE EL PLAYER, RETORNA, SINO, ES NULL
         _seeTarget = g;
 
@@ -64,6 +63,7 @@ public class ChaseState : IState
         {
             if (_enemy.ChasePath.Count == 0) // CHECK SI YA EXISTE CAMINO
             {
+
                 Node goalNode = GetNerbyTargetNode(); // EL NODO FINAL SERÁ EL MAS CERCANO AL TARGET
 
                 if (goalNode == null)
@@ -71,14 +71,11 @@ public class ChaseState : IState
                     _onGoalNode = true;
                     return;
                 }
+
                 _enemy.ChasePath = _enemy.GetPath(_enemy.GetNerbyNode(), goalNode); //CONSTRUYE EL CAMINO DESDE EL NODO MAS CERCANO HASTA EL MAS CERCANO AL PLAYER
                 _enemy.ChasePath.Reverse(); // INVIERTE LA LISTA (EL CAMINO)
 
-                if (lastCount != _enemy.ChasePath.Count)
-                {
-                    lastCount = _enemy.ChasePath.Count;
-                    _currentChaseNode = 0;
-                }
+                _currentChaseNode = 0;
 
                 if (_enemy.ChasePath.Count == 0)
                 {
@@ -105,26 +102,25 @@ public class ChaseState : IState
         if (_enemy.Target == null)
             return null;
 
+        float distance = float.MaxValue; // SETEA LA DISTANCIA AL MAXIMO COMO PRIMER VALOR
         GameObject nerbyNode = null;
-
         List<Node> allNodes = GameObject.FindObjectsOfType<Node>().ToList();
 
-        float distance = float.MaxValue;
-
-        foreach (var item in allNodes)
+        foreach (var node in allNodes) // CHECK TODOS LOS NODOS A VER CUAL ESTÁ MAS CERCA DEL TARGET
         {
-            Vector3 nodeDistance = item.transform.position - _enemy.Target.transform.position;
+            Vector3 nodeDistance = node.transform.position - _enemy.Target.transform.position;
 
             if (nodeDistance.magnitude < distance)
             {
-                if (!Physics.Raycast(_enemy.Target.transform.position, nodeDistance, nodeDistance.magnitude, _enemy.WallLayer))
+                if (!Physics.Raycast(_enemy.LastTargetPosition, nodeDistance, nodeDistance.magnitude, _enemy.WallLayer))
                 {
                     distance = nodeDistance.magnitude;
-                    nerbyNode = item.gameObject;
+                    nerbyNode = node.gameObject;
+                    _enemy.LastGoalNode = nerbyNode.GetComponent<Node>();
                 }
             }
         }
+
         return nerbyNode.GetComponent<Node>();
     }
 }
-

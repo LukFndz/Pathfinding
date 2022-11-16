@@ -18,10 +18,9 @@ public class PatrolState : IState
 
     public void ManualUpdate()
     {
-        //Debug.Log("PATROL: " + _enemy.gameObject.name);
-
         if (_enemy.Target != null)
         {
+            _backPath.Clear();
             _sm.ChangeState("ChaseState");
             return;
         }
@@ -91,15 +90,15 @@ public class PatrolState : IState
     {
         if (_backPath.Count == 0)
         {
-            _backPath = _enemy.GetPath(_enemy.GetNerbyNode(), _enemy.wayPoints[0].gameObject.GetComponent<Node>());
+            _backPath = _enemy.GetPath(_enemy.LastGoalNode, _enemy.wayPoints[0].gameObject.GetComponent<Node>());
             _backPath.Reverse();
 
             _currentReturnNode = 0;
             _enemy.CurrentWayPoint = 0;
-        }
 
-        if (_backPath.Count == 0)
-            Patrol();
+            if (_backPath.Count == 0)
+                Patrol();
+        }
 
         _enemy.Move(_backPath[_currentReturnNode].transform.position);
 

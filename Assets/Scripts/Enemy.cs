@@ -32,13 +32,13 @@ public class Enemy : MonoBehaviour
 
     private int _currentWayPoint = 0;
 
-    [SerializeField]private List<Node> _chasePath = new List<Node>();
+    private List<Node> _chasePath = new List<Node>();
 
     private Vector3 _lastTargetPosition;
+    private Node _lastGoalNode;
 
     private StateMachine _sm;
     private List<Enemy> _enemies;
-
 
     private Vector3 dirToTarget;
     private Ray ray;
@@ -55,6 +55,7 @@ public class Enemy : MonoBehaviour
     public int CurrentWayPoint { get => _currentWayPoint; set => _currentWayPoint = value; }
     public float ViewRadius { get => _viewRadius; set => _viewRadius = value; }
     public float AngleRadius { get => _angleRadius; set => _angleRadius = value; }
+    public Node LastGoalNode { get => _lastGoalNode; set => _lastGoalNode = value; }
 
     private void Awake()
     {
@@ -123,7 +124,6 @@ public class Enemy : MonoBehaviour
                     path.Add(current);
                     current = cameFrom[current];
                 }
-                path.Add(startingNode);
                 return path;
             }
 
