@@ -97,7 +97,9 @@ public class PatrolState : IState
             _enemy.CurrentWayPoint = 0;
 
             if (_backPath.Count == 0)
+            {
                 Patrol();
+            }
         }
 
         _enemy.Move(_backPath[_currentReturnNode].transform.position);
